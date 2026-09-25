@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carta Desplegable con Lirios</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #E6DEF2;
+      color: #2D2536;
+      font-family: 'Montserrat', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Canvas para la animación diagonal de lirios */
+    #lilyCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Contenedor principal */
+    .scene-wrapper {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100vh;
+    }
+
+    .container {
+      position: relative;
+      width: 420px;
+      height: 270px;
+      cursor: pointer;
+      margin-top: 180px;
+    }
+
+    /* Sobre */
+    .envelope {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background-color: #4A3A60;
+      border-radius: 12px;
+      box-shadow: 0 20px 40px rgba(45, 37, 54, 0.25), 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Solapa superior */
+    .flap {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 0;
+      border-left: 210px solid transparent;
+      border-right: 210px solid transparent;
+      border-top: 145px solid #5A4775;
+      transform-origin: top;
+      transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 4;
+      filter: drop-shadow(0 2px 5px rgba(0,0,0,0.15));
+    }
+
+    /* Laterales e inferior */
+    .pocket {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 0;
+      border-left: 210px solid #413254;
+      border-right: 210px solid #413254;
+      border-bottom: 135px solid #4C3C63;
+      border-radius: 0 0 12px 12px;
+      z-index: 3;
+    }
+
+    /* Hoja interna */
+    .letter {
+      position: absolute;
+      left: 20px;
+      bottom: 15px;
+      width: 380px;
+      height: 380px;
+      background: #FAFAFD;
+      background-image: radial-gradient(#8A75A8 0.5px, transparent 0.5px);
+      background-size: 16px 16px;
+      color: #2D2536;
+      border-radius: 8px;
+      padding: 35px 30px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(0);
+      transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.3s, opacity 0.4s ease 0.3s, visibility 0s 0.8s;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .letter::-webkit-scrollbar {
+      width: 5px;
+    }
+    .letter::-webkit-scrollbar-thumb {
+      background-color: #C4B2DA;
+      border-radius: 10px;
+    }
+
+    .letter-body {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.25rem;
+      line-height: 1.7;
+      color: #332B3C;
+      white-space: pre-line;
+    }
+
+    /* Sello de corazón negro */
+    .heart-seal {
+      position: absolute;
+      top: 125px;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50px;
+      height: 50px;
+      background-color: #18161B;
+      border: 2px solid #2D2833;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 5;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    .heart-seal::before {
+      content: '♥';
+      color: #EAE6EF;
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .heart-seal:hover {
+      transform: translate(-50%, -50%) scale(1.1);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Estado abierto */
+    .container.open .flap {
+      transform: rotateX(180deg);
+      z-index: 1;
+    }
+
+    .container.open .letter {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(-260px);
+      z-index: 4;
+      transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.3s, opacity 0.4s ease 0.3s, visibility 0s 0s;
+    }
+
+    .container.open .heart-seal {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.3);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="lilyCanvas"></canvas>
+
+  <div class="scene-wrapper">
+    <div class="container" id="envelopeContainer">
+      <div class="envelope">
+        <div class="flap"></div>
+        <div class="pocket"></div>
+        
+        <div class="letter">
+          <div class="letter-body" id="letterText">¡Feliz cumpleaños, te amo!
+
+En este día tan especial como lo es tu cumpleaños te recuerdo lo mucho que te amo, te recuerdo la calidez en mi pecho cuando nos abrazamos o simplemente estamos cerca, te recuerdo que no es necesario ser alguien más para que te ame con todo mi ser.
+            Adoro estar contigo, adoro tus ojos, tu sonrisa, tu cara, la manera en la que te ríes, hacerte cosquillas, darte muchos besos en tu cabeza y en tu mejilla; pero sobre todo, adoro y me gustas tú.
+            Desde el primer día que te conocí supe que seríamos muy cercanos, pero nunca me imaginé que así de cercanos; no obstante, no pudo ser mejor, esto es una de las cosas que siempre quise sin darme cuenta, amar y ser amado.
+            Pronto, en este mismo día, verás lo que tengo para ti 🖤🖤🖤.</div>
+        </div>
+
+        <div class="heart-seal" id="seal" title="Haz clic para abrir"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Configuración del canvas de lirios
+    const canvas = document.getElementById('lilyCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Dibujar flor de lirio estilizada
+    function drawLily(x, y, scale, angle, opacity) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.scale(scale, scale);
+      ctx.globalAlpha = opacity;
+
+      const petalColor = '#D1BFDF';
+      const centerColor = '#A48EBC';
+      const stamenColor = '#8A75A8';
+
+      // 6 pétalos ordenados
+      for (let i = 0; i < 6; i++) {
+        ctx.save();
+        ctx.rotate((i * 60 * Math.PI) / 180);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(-12, -25, -10, -50, 0, -65);
+        ctx.bezierCurveTo(10, -50, 12, -25, 0, 0);
+        ctx.fillStyle = petalColor;
+        ctx.fill();
+
+        // Línea central del pétalo
+        ctx.beginPath();
+        ctx.moveTo(0, -5);
+        ctx.lineTo(0, -45);
+        ctx.strokeStyle = centerColor;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Estambres centrales
+      for (let i = 0; i < 6; i++) {
+        ctx.save();
+        ctx.rotate((i * 60 + 30) * Math.PI / 180);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, -18);
+        ctx.strokeStyle = stamenColor;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(0, -20, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = stamenColor;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
+
+    // Partículas de lirio con movimiento diagonal
+    class LilyParticle {
+      constructor() {
+        this.reset(true);
+      }
+
+      reset(initial = false) {
+        this.scale = 0.25 + Math.random() * 0.35;
+        this.angle = (-45 * Math.PI) / 180; // Apuntando diagonalmente
+        this.speed = 0.6 + Math.random() * 0.8;
+        this.opacity = 0.35 + Math.random() * 0.35;
+        this.rotSpeed = (Math.random() - 0.5) * 0.005;
+
+        // Distribución en pantalla
+        if (initial) {
+          this.x = Math.random() * (canvas.width + 400) - 200;
+          this.y = Math.random() * (canvas.height + 400) - 200;
+        } else {
+          if (Math.random() > 0.5) {
+            this.x = -100;
+            this.y = Math.random() * (canvas.height + 200);
+          } else {
+            this.x = Math.random() * (canvas.width + 200);
+            this.y = canvas.height + 100;
+          }
+        }
+      }
+
+      update() {
+        // Avance en la trayectoria de su ángulo diagonal
+        this.x += Math.cos(this.angle) * this.speed;
+        this.y += Math.sin(this.angle) * this.speed;
+        this.angle += this.rotSpeed;
+
+        if (this.x > canvas.width + 150 || this.y < -150) {
+          this.reset(false);
+        }
+      }
+
+      draw() {
+        drawLily(this.x, this.y, this.scale, this.angle + Math.PI / 2, this.opacity);
+      }
+    }
+
+    // Generar lirios con separación amplia
+    const lilyCount = 14;
+    const lilies = Array.from({ length: lilyCount }, () => new LilyParticle());
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      lilies.forEach(lily => {
+        lily.update();
+        lily.draw();
+      });
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // Interacción de abrir y cerrar carta
+    const container = document.getElementById('envelopeContainer');
+    const seal = document.getElementById('seal');
+
+    seal.addEventListener('click', (e) => {
+      e.stopPropagation();
+      container.classList.add('open');
+    });
+
+    container.addEventListener('click', () => {
+      if (container.classList.contains('open')) {
+        container.classList.remove('open');
+      }
+    });
+  </script>
+
+</body>
+</html>
